@@ -2788,9 +2788,16 @@ function buildVCard(){
     CONFIG.title ? `TITLE:${CONFIG.title}` : '',
     CONFIG.phone ? `TEL;TYPE=CELL,VOICE:${CONFIG.phone}` : '',
     CONFIG.email ? `EMAIL;TYPE=INTERNET:${CONFIG.email}` : '',
-    CONFIG.website ? `URL:${CONFIG.website}` : '',
+    CONFIG.website ? `item1.URL:${CONFIG.website}` : '',
+    CONFIG.website ? `item1.X-ABLabel:Website` : '',
     `ADR;TYPE=WORK:;;;${L.city||''};${L.region||''};;${L.country||''}`,
-    ...CONFIG.socials.filter(s=>s.url && s.url.trim()).map(s=>`URL:${s.url}`),
+    ...CONFIG.socials
+      .filter(s=>s.url && s.url.trim() && s.key!=='website' && s.key!=='email' && s.url!==CONFIG.website)
+      .flatMap((s,i)=>[
+        `X-SOCIALPROFILE;TYPE=${s.key}:${s.url}`,
+        `item${i+2}.URL:${s.url}`,
+        `item${i+2}.X-ABLabel:${s.name}`,
+      ]),
     'END:VCARD'
   ].filter(Boolean);
   return lines.join('\r\n');
