@@ -217,25 +217,31 @@
     position:fixed; inset:0; z-index:60;
     display:none; align-items:center; justify-content:center;
     padding:24px;
-    background:rgba(6,22,21,0.72);
-    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+    background:rgba(4,11,31,0.78);
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
   }
   #qrModal.show{ display:flex; }
   #qrModal .sheet{
-    background:var(--cream); border-radius:22px;
-    padding:22px 22px 18px; max-width:320px; width:100%;
-    text-align:center; box-shadow:0 30px 70px -20px rgba(0,0,0,0.7);
+    background:linear-gradient(180deg,#13275a,#0a1634 60%,#040b1f); border-radius:24px;
+    border:1px solid rgba(120,165,255,0.25);
+    padding:24px 22px 18px; max-width:330px; width:100%;
+    text-align:center; box-shadow:0 30px 70px -20px rgba(0,0,0,0.8), 0 0 60px -20px rgba(61,130,255,0.5);
   }
   #qrModal .sheet h3{
-    margin:0 0 4px; font-family:var(--serif); font-weight:400;
-    font-size:20px; color:#123c3a;
+    margin:0 0 6px; font-family:var(--sans); font-weight:700;
+    font-size:19px; color:#f4f7fc;
   }
-  #qrModal .sheet p{ margin:0 0 14px; font-size:12px; color:#4a5b7d; word-break:break-all; }
-  #qrModal .qrbox svg{ width:100%; height:auto; display:block; border-radius:10px; }
+  #qrModal .sheet p{ margin:0 0 16px; font-size:12.5px; line-height:1.45; color:rgba(214,224,242,0.75); }
+  #qrModal .qrbox{ position:relative; background:#fff; border-radius:18px; padding:10px;
+    border:3px solid #3d82ff; box-shadow:0 0 0 6px rgba(61,130,255,0.12); }
+  #qrModal .qrbox svg{ width:100%; height:auto; display:block; }
+  #qrModal .qrlogo{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:22%; aspect-ratio:1; background:#fff; border-radius:12px; display:grid; place-items:center; }
+  #qrModal .qrlogo svg{ width:78%; height:auto; }
   #qrModal .close{
     margin-top:14px; width:100%; border:0; border-radius:12px; cursor:pointer;
     padding:11px; font-family:var(--sans); font-size:13px; font-weight:650;
-    color:var(--cream); background:var(--teal);
+    color:#fff; background:linear-gradient(180deg,#3d82ff,#1659e6);
   }
 
   /* ---------- Quick row ---------- */
@@ -380,10 +386,10 @@
 
   <div id="qrModal" aria-hidden="true">
     <div class="sheet">
-      <h3 id="qrTitle">Scan to connect</h3>
-      <p id="qrUrl"></p>
+      <h3 id="qrTitle">Kontakt speichern</h3>
+      <p id="qrUrl">Scannen &amp; Kingsley James direkt zu den Kontakten hinzufügen.</p>
       <div class="qrbox" id="qrbox"></div>
-      <button class="close" id="qrClose" type="button">Done</button>
+      <button class="close" id="qrClose" type="button">Fertig</button>
     </div>
   </div>
 
@@ -2866,14 +2872,27 @@ document.getElementById('saveBtn').addEventListener('click', () => {
     const modal = document.getElementById('qrModal');
     const box = document.getElementById('qrbox');
     const openQR = () => {
-      document.getElementById('qrUrl').textContent = location.href;
       if (!box.dataset.rendered && typeof qrcode === 'function'){
         try{
-          const qr = qrcode(0, 'M'); qr.addData(location.href); qr.make();
-          let svg = qr.createSvgTag({ cellSize: 8, margin: 12, scalable: true });
-          svg = svg.replace(/fill="white"/g, 'fill="#FBF1E6"')
-                   .replace(/fill="black"/g, 'fill="#104241"');
-          box.innerHTML = svg; box.dataset.rendered = '1';
+          // Encode the contact itself (not the page URL): scanning offers "Add contact" directly.
+          const L = CONFIG.location;
+          const v = ['BEGIN:VCARD','VERSION:3.0',
+            `N:${CONFIG.lastName};${CONFIG.firstName}`,`FN:${CONFIG.fullName}`,
+            `ORG:${CONFIG.org}`,`TITLE:${CONFIG.title}`,
+            CONFIG.phone ? `TEL;TYPE=CELL:${CONFIG.phone}` : '',
+            CONFIG.email ? `EMAIL:${CONFIG.email}` : '',
+            CONFIG.website ? `URL:${CONFIG.website}` : '',
+            ...CONFIG.socials.filter(x=>x.key==='linkedin' && x.url).map(x=>`X-SOCIALPROFILE;TYPE=linkedin:${x.url}`),
+            `ADR;TYPE=WORK:;;;${L.city||''};;;${L.country||''}`,
+            'END:VCARD'].filter(Boolean).join('\r\n');
+          qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+          const qr = qrcode(0, 'H'); qr.addData(v, 'Byte'); qr.make();
+          let svg = qr.createSvgTag({ cellSize: 8, margin: 3, scalable: true });
+          svg = svg.replace(/fill="white"/g, 'fill="#ffffff"')
+                   .replace(/fill="black"/g, 'fill="url(#qrg)"')
+                   .replace(/(<svg[^>]*>)/, '$1<defs><linearGradient id="qrg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a1634"/><stop offset="1" stop-color="#1659e6"/></linearGradient></defs>');
+          box.innerHTML = svg + '<div class="qrlogo"><svg viewBox="0 0 120 64" aria-hidden="true"><path d="M40 4H24a28 28 0 0 0 0 56h16l3-8H24a20 20 0 0 1 0-40h19z" fill="#0a1634"/><path d="M30 24l-8 8 8 8M42 22l-6 20M48 24l8 8-8 8" stroke="#1659e6" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M64 26h22M64 32h28M64 38h22" stroke="#1659e6" stroke-width="5" stroke-linecap="round"/></svg></div>';
+          box.dataset.rendered = '1';
         }catch(e){ box.innerHTML = '<p>Could not render code.</p>'; }
       }
       modal.classList.add('show'); modal.setAttribute('aria-hidden','false');
